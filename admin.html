@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="bn">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Turkish BD | Admin</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+*{box-sizing:border-box}body{margin:0;font-family:Arial,sans-serif;background:#f5f5f2;color:#29251f}header{background:#173c32;color:white;padding:20px;text-align:center}main{max-width:850px;margin:20px auto;padding:0 14px}.panel{background:white;padding:16px;border-radius:10px;margin:14px 0;box-shadow:0 2px 9px #0001}input,textarea,select{display:block;width:100%;padding:12px;margin:9px 0;border:1px solid #ccc;border-radius:7px;font-size:16px}button,a.btn{background:#173c32;color:white;padding:11px 15px;border:0;border-radius:7px;text-decoration:none;display:inline-block;margin:4px 4px 4px 0;font-size:15px}button.secondary{background:#777}.item{border-top:1px solid #ddd;padding:12px 0;display:flex;gap:12px;align-items:center;flex-wrap:wrap}.item img{width:76px;height:76px;object-fit:cover;border-radius:6px}.item .details{flex:1;min-width:150px}small,.muted{color:#666;line-height:1.6}.hidden{display:none}.status{padding:10px;background:#f2eee5;border-radius:7px;margin:8px 0;white-space:pre-wrap}.danger{background:#9b2929}
+</style>
+</head>
+<body>
+<header><h2>TURKISH BD — Admin Panel</h2><a class="btn" href="index.html">Customer Website</a></header>
+<main>
+<div class="panel" id="loginPanel"><h3>Admin Login</h3><p class="muted">তোমার Supabase-এ তৈরি করা Email ও Password দিয়ে Login করো।</p>
+<input id="email" type="email" placeholder="Email address" autocomplete="username">
+<input id="password" type="password" placeholder="Password" autocomplete="current-password">
+<button onclick="login()">Login</button><div id="loginMsg" class="status">Login না করলে পণ্য পরিচালনা করা যাবে না।</div></div>
+<div id="app" class="hidden">
+<div class="panel"><b id="who"></b> <button class="secondary" onclick="logout()">Logout</button><div id="msg" class="status">Connected</div></div>
+<div class="panel"><h3>নতুন পণ্য যোগ / সম্পাদনা</h3>
+<input id="name" placeholder="পণ্যের নাম">
+<select id="category"><option>Home Decor</option><option>Bags</option><option>Shoes</option><option>Clothing</option><option>Accessories</option><option>Others</option></select>
+<input id="price" placeholder="দাম (টাকা)" type="number" min="0" step="0.01">
+<textarea id="description" placeholder="পণ্যের বিবরণ"></textarea>
+<input id="photo" type="file" accept="image/*">
+<select id="stock"><option value="true">In stock</option><option value="false">Out of stock</option></select>
+<button onclick="saveProduct()">Save Product</button><button class="secondary" onclick="resetForm()">Clear</button>
+<small>পণ্যের ছবি Supabase-এ আপলোড হবে, তাই Customer Website-এও দেখা যাবে।</small></div>
+<div class="panel"><h3>পণ্যের তালিকা</h3><div id="list">Loading...</div></div>
+<div class="panel"><h3>অর্ডার নোট</h3><p>WhatsApp অর্ডার এখানে স্বয়ংক্রিয়ভাবে আসবে না।</p><textarea id="orders" placeholder="কাস্টমারের নাম, পণ্য, ফোন, ঠিকানা ও অর্ডারের অবস্থা লিখুন..."></textarea><button onclick="localStorage.setItem('turkishBD_orders',document.getElementById('orders').value);alert('Saved')">অর্ডার নোট Save</button></div>
+</div></main>
+<script>
+const SUPABASE_URL='https://irkwdmfuovgoqdgaqjgp.supabase.co';
+const SUPABASE_ANON_KEY='sb_publishable_CH-0_kEUl_SjEa647yoPmg_iBxZGsCH';
+const db=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
+let editId=null,oldImage=null;
+const $=id=>document.getElementById(id);
+function message(t){$('msg').textContent=t}
+function loginMessage(t){$('loginMsg').textContent=t}
+async function login(){loginMessage('Login হচ্ছে...');const {data,error}=await db.auth.signInWithPassword({email:$('email').value.trim(),password:$('password').value});if(error){loginMessage('Login হয়নি: '+error.message);return}await showApp(data.user)}
+async function logout(){await db.auth.signOut();$('app').classList.add('hidden');$('loginPanel').classList.remove('hidden');loginMessage('Logout হয়েছে।')}
+async function showApp(user){$('loginPanel').classList.add('hidden');$('app').classList.remove('hidden');$('who').textContent='Logged in: '+user.email;$('orders').value=localStorage.getItem('turkishBD_orders')||'';await migrateOldProducts();await draw()}
+db.auth.getSession().then(({data})=>{if(data.session)showApp(data.session.user)});
+db.auth.onAuthStateChange((event,session)=>{if(event==='SIGNED_OUT'){$('app').classList.add('hidden');$('loginPanel').classList.remove('hidden')}});
+function resetForm(){editId=null;oldImage=null;['name','price','description'].forEach(id=>$(id).value='');$('photo').value='';$('stock').value='true';$('category').value='Home Decor'}
+async function uploadImage(fileOrData){let file=fileOrData;if(typeof fileOrData==='string'&&fileOrData.startsWith('data:')){const res=await fetch(fileOrData);const blob=await res.blob();file=new File([blob],'product-'+Date.now()+'.jpg',{type:blob.type||'image/jpeg'})}if(!file)return null;const ext=(file.name||'photo.jpg').split('.').pop().toLowerCase().replace(/[^a-z0-9]/g,'')||'jpg';const path=Date.now()+'-'+crypto.randomUUID()+'.'+ext;const {error}=await db.storage.from('product-images').upload(path,file,{upsert:false,contentType:file.type||'image/jpeg'});if(error)throw error;return db.storage.from('product-images').getPublicUrl(path).data.publicUrl}
+async function saveProduct(){try{const name=$('name').value.trim(),price=Number($('price').value);if(!name||!$('price').value||!Number.isFinite(price)){message('পণ্যের নাম ও সঠিক দাম দিন।');return}message('পণ্য Save হচ্ছে...');let image_url=oldImage;const f=$('photo').files[0];if(f)image_url=await uploadImage(f);const row={name,category:$('category').value,price,description:$('description').value,image_url,in_stock:$('stock').value==='true'};let result;if(editId)result=await db.from('products').update(row).eq('id',editId);else result=await db.from('products').insert(row);if(result.error)throw result.error;message('পণ্য সফলভাবে Save হয়েছে।');resetForm();await draw()}catch(e){message('Save হয়নি: '+e.message)}}
+async function editProduct(id){const {data,error}=await db.from('products').select('*').eq('id',id).single();if(error){message(error.message);return}editId=id;oldImage=data.image_url;$('name').value=data.name;$('category').value=data.category;$('price').value=data.price;$('description').value=data.description||'';$('stock').value=String(data.in_stock!==false);$('photo').value='';window.scrollTo({top:0,behavior:'smooth'})}
+async function deleteProduct(id){if(!confirm('পণ্যটি মুছবেন?'))return;const {error}=await db.from('products').delete().eq('id',id);if(error){message('Delete হয়নি: '+error.message);return}message('পণ্য Delete হয়েছে।');await draw()}
+function esc(s){return String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
+async function draw(){const {data,error}=await db.from('products').select('*').order('created_at',{ascending:false});if(error){$('list').textContent='পণ্য লোড হয়নি: '+error.message;return}$('list').innerHTML=data.length?data.map(p=>`<div class="item">${p.image_url?`<img src="${esc(p.image_url)}" alt="">`:''}<div class="details"><b>${esc(p.name)}</b> — ৳${esc(p.price)}<br><small>${esc(p.category)} · ${p.in_stock?'In stock':'Out of stock'}</small></div><button onclick="editProduct(${p.id})">Edit</button><button class="danger" onclick="deleteProduct(${p.id})">Delete</button></div>`).join(''):'কোনো পণ্য যোগ করা হয়নি'}
+async function migrateOldProducts(){if(localStorage.getItem('turkishBD_supabase_migrated_v1'))return;let old=[];try{old=JSON.parse(localStorage.getItem('turkishBD_products_v1')||'[]')}catch(e){}if(!old.length){localStorage.setItem('turkishBD_supabase_migrated_v1','yes');return}message('আগের পণ্যগুলো Supabase-এ নেওয়া হচ্ছে...');for(const p of old){const {data:found}=await db.from('products').select('id').eq('name',p.name).eq('price',Number(p.price)||0).limit(1);if(found&&found.length)continue;let image_url=null;if(p.image){try{image_url=await uploadImage(p.image)}catch(e){message('ছবি আপলোড হয়নি ('+p.name+'): '+e.message)}}const row={name:p.name,category:p.category||'Others',price:Number(p.price)||0,description:p.description||'',image_url,in_stock:p.stock!=='Out of stock'};const {error}=await db.from('products').insert(row);if(error){message('আগের পণ্য স্থানান্তর থেমেছে: '+error.message+'। আবার Login করে চেষ্টা করা যাবে।');return}}localStorage.setItem('turkishBD_supabase_migrated_v1','yes');message('আগের পণ্যগুলোও Supabase-এ নেওয়া হয়েছে।')}
+</script></body></html>
