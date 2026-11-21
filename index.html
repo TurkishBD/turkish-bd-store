@@ -313,14 +313,12 @@ document.getElementById('orderForm').addEventListener('submit',async function(e)
  message.textContent='Order submitted successfully! Your Tracking Code: '+trackingCode+'. Please save this code to track your order.';
  button.textContent='Order Submitted';
  
- button.textContent='Order Submitted';
 
  this.reset();
 
- setTimeout(()=>{
+setTimeout(()=>{
  closeOrderForm();
- },2500);
-});
+},10000);
 
 loadProducts();
 </script>
