@@ -284,6 +284,12 @@ document.getElementById('orderForm').addEventListener('submit',async function(e)
   message.textContent='Submitting your order...';
  button.disabled=true;
 
+
+ const trackingCode = 'TB-' + crypto.randomUUID()
+   .replace(/-/g, '')
+   .slice(0, 12)
+   .toUpperCase();
+
  const order={
  customer_name:name,
  phone:phone,
@@ -291,19 +297,22 @@ document.getElementById('orderForm').addEventListener('submit',async function(e)
  product_name:selectedProduct.name,
  quantity:qty,
  total:total,
- status:'Pending'
+ status:'Pending',
+ tracking_code:trackingCode
  };
 
  const {data,error}=await db.from('orders').insert([order]);
 
  if(error){
  console.error(error);
-  message.textContent='Order failed: '+error.message;
+ message.textContent='Order failed: '+error.message;
  button.disabled=false;
  return;
  }
 
- message.textContent='Your order has been submitted successfully! We will contact you soon.';
+ message.textContent='Order submitted successfully! Your Tracking Code: '+trackingCode+'. Please save this code to track your order.';
+ button.textContent='Order Submitted';
+ 
  button.textContent='Order Submitted';
 
  this.reset();
