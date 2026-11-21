@@ -298,7 +298,7 @@ document.getElementById('orderForm').addEventListener('submit',async function(e)
 
  if(error){
  console.error(error);
-message.textContent='Order failed: '+error.message;
+  message.textContent='Order failed: '+error.message;
  button.disabled=false;
  return;
  }
