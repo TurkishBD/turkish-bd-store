@@ -324,5 +324,82 @@ document.getElementById('orderForm').addEventListener('submit',async function(e)
 
 loadProducts();
 </script>
+ 
+<!-- CUSTOMER ORDER TRACKING -->
+<section id="order-tracking" style="padding:55px 6%;background:#eee7db;">
+  <div style="max-width:520px;margin:auto;background:#fffdf9;padding:28px;border-radius:8px;border:1px solid #e5dac8;">
+    <div style="text-align:center;">
+      <small style="letter-spacing:2px;color:#b58a55;">TURKISH BD</small>
+      <h2 style="font-family:Georgia,serif;font-size:32px;color:#263b36;margin:12px 0;">Track Your Order</h2>
+      <p style="font-size:14px;color:#716f67;line-height:1.7;">Enter your tracking code and phone number to check your order status.</p>
+    </div>
+
+    <label style="display:block;margin:18px 0 6px;font-size:13px;font-weight:bold;">Tracking Code</label>
+    <input id="trackCode" placeholder="Enter your tracking code"
+      style="width:100%;padding:13px;border:1px solid #d9d2c8;border-radius:4px;font-size:15px;">
+
+    <label style="display:block;margin:18px 0 6px;font-size:13px;font-weight:bold;">Phone Number</label>
+    <input id="trackPhone" type="tel" inputmode="tel" placeholder="Enter your order phone number"
+      style="width:100%;padding:13px;border:1px solid #d9d2c8;border-radius:4px;font-size:15px;">
+
+    <button id="trackButton" type="button"
+      style="width:100%;margin-top:20px;padding:14px;background:#263b36;color:white;border:0;border-radius:4px;font-size:14px;letter-spacing:1px;cursor:pointer;">
+      TRACK ORDER
+    </button>
+
+    <div id="trackResult" style="margin-top:20px;"></div>
+  </div>
+</section>
+
+<script>
+document.getElementById('trackButton').addEventListener('click', async function(){
+  const code = document.getElementById('trackCode').value.trim();
+  const phone = document.getElementById('trackPhone').value.trim();
+  const result = document.getElementById('trackResult');
+  const button = this;
+
+  if(!code || !phone){
+    result.innerHTML='<p style="color:#a33;text-align:center;">Please enter both tracking code and phone number.</p>';
+    return;
+  }
+
+  button.disabled=true;
+  button.textContent='CHECKING...';
+  result.innerHTML='';
+
+  const {data,error}=await db.rpc('track_customer_order',{
+    p_tracking_code:code,
+    p_phone:phone
+  });
+
+  button.disabled=false;
+  button.textContent='TRACK ORDER';
+
+  if(error){
+    console.error(error);
+    result.innerHTML='<p style="color:#a33;text-align:center;">Unable to check your order right now. Please try again.</p>';
+    return;
+  }
+
+  if(!data || !data.length){
+    result.innerHTML='<p style="color:#a33;text-align:center;">Order not found. Please check your tracking code and phone number.</p>';
+    return;
+  }
+
+  const order=data[0];
+  const status=order.status||'Pending';
+
+  result.innerHTML=`
+    <div style="background:#f7f3eb;padding:18px;border-radius:5px;color:#263b36;">
+      <h3 style="margin:0 0 12px;font-family:Georgia,serif;">Order Details</h3>
+      <p><b>Product:</b> ${esc(order.product_name)}</p>
+      <p><b>Quantity:</b> ${esc(order.quantity)}</p>
+      <p><b>Status:</b> <span style="color:#b58a55;font-weight:bold;">${esc(status)}</span></p>
+      <p><b>Order Date:</b> ${new Date(order.created_at).toLocaleDateString('en-BD')}</p>
+    </div>
+  `;
+});
+</script>
+
 </body>
 </html>
