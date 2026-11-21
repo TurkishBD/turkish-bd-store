@@ -310,19 +310,42 @@ document.getElementById('orderForm').addEventListener('submit',async function(e)
  return;
  }
 
- message.textContent='Order submitted successfully! Your Tracking Code: '+trackingCode+'. Please save this code to track your order.';
- button.textContent='Order Submitted';
  
 
- this.reset();
+message.innerHTML = `
+  <div style="background:#f7f3eb;padding:22px;border-radius:10px;text-align:center;color:#263b36;margin-top:15px;">
+    <h2 style="margin:0 0 10px;">🎉 Order Confirmed!</h2>
+    <p>Your order has been submitted successfully.</p>
+    <p style="margin-bottom:8px;">Your Tracking Code:</p>
+    <div id="customerTrackingCode" style="font-size:22px;font-weight:bold;letter-spacing:2px;background:white;padding:14px;border-radius:6px;">
+      ${trackingCode}
+    </div>
+    <button type="button" id="copyTrackingCode" style="background:#263b36;color:white;padding:12px 22px;border:0;border-radius:5px;margin-top:12px;cursor:pointer;">
+      COPY TRACKING CODE
+    </button>
+    <p style="font-size:13px;margin-top:12px;">Please save this code to track your order later.</p>
+  </div>
+`;
 
-setTimeout(()=>{
- closeOrderForm();
-},10000);
+document.getElementById('copyTrackingCode').addEventListener('click', async function(){
+  try {
+    await navigator.clipboard.writeText(trackingCode);
+    this.textContent = 'COPIED!';
+  } catch(error) {
+    this.textContent = 'Please copy the code manually';
+  }
+});
+
+
+ 
+button.textContent = 'Order Submitted';
+this.reset();
+
+});
 
 loadProducts();
+
 </script>
- 
 <!-- CUSTOMER ORDER TRACKING -->
 <section id="order-tracking" style="padding:55px 6%;background:#eee7db;">
   <div style="max-width:520px;margin:auto;background:#fffdf9;padding:28px;border-radius:8px;border:1px solid #e5dac8;">
